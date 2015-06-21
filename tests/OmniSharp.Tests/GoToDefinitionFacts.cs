@@ -67,5 +67,40 @@ class Foo {
             Assert.Equal(0, definitionResponse.Line);
             Assert.Equal(0, definitionResponse.Column);
         }
+        
+        [Fact]
+        public async Task ReturnsPositionInMetadata()
+        {
+            var source1 = @"using System;
+
+class Foo {
+}";
+            var source2 = @"using System;
+
+class Bar {
+    public void Baz() {
+        Console.WriteLine(""Stuff"");
+    }
+}";
+
+            var workspace = TestHelpers.CreateSimpleWorkspace(new Dictionary<string, string> {
+                { "foo.cs", source1 }, { "bar.cs", source2}
+            });
+            var controller = new OmnisharpController(workspace, null);
+            var response = await controller.GotoDefinition(new Request
+            {
+                FileName = "bar.cs",
+                Line = 5,
+                Column = 20
+            }) as ObjectResult;
+
+            var definitionResponse = response.Value as GotoDefinitionResponse;
+
+            Assert.Null(definitionResponse.FileName);
+            Assert.Equal(0, definitionResponse.Line);
+            Assert.Equal(0, definitionResponse.Column);
+            Assert.Contains("public static class Console", definitionResponse.MetadataSource);
+            Assert.Contains("public static void WriteLine(string value)", definitionResponse.MetadataSource);
+        }
     }
 }
