@@ -67,6 +67,7 @@ namespace OmniSharp
 
             return new ObjectResult(response);
         }
+
         public static INamedTypeSymbol GetTopLevelContainingNamedType(ISymbol symbol)
         {
             // Traverse up until we find a named type that is parented by the namespace

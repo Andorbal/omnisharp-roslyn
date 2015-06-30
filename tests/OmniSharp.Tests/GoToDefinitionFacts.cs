@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Mvc;
 using OmniSharp.Models;
@@ -69,28 +67,13 @@ class Foo {
         }
         
         [Fact]
-        public async Task ReturnsPositionInMetadata()
+        public async Task ReturnsPositionInMetadata_WhenSymbolIsMethod()
         {
-            var source1 = @"using System;
-
-class Foo {
-}";
-            var source2 = @"using System;
-
-class Bar {
-    public void Baz() {
-        Console.WriteLine(""Stuff"");
-    }
-}";
-
-            var workspace = TestHelpers.CreateSimpleWorkspace(new Dictionary<string, string> {
-                { "foo.cs", source1 }, { "bar.cs", source2}
-            });
-            var controller = new OmnisharpController(workspace, null);
+            var controller = new OmnisharpController(CreateTestWorkspace(), null);
             var response = await controller.GotoDefinition(new Request
             {
                 FileName = "bar.cs",
-                Line = 5,
+                Line = 7,
                 Column = 20
             }) as ObjectResult;
 
@@ -101,6 +84,69 @@ class Bar {
             Assert.Equal(0, definitionResponse.Column);
             Assert.Contains("public static class Console", definitionResponse.MetadataSource);
             Assert.Contains("public static void WriteLine(string value)", definitionResponse.MetadataSource);
+        }
+
+        [Fact]
+        public async Task ReturnsPositionInMetadata_WhenSymbolIsExtensionMethod()
+        {
+            var controller = new OmnisharpController(CreateTestWorkspace(), null);
+            var response = await controller.GotoDefinition(new Request
+            {
+                FileName = "bar.cs",
+                Line = 10,
+                Column = 17
+            }) as ObjectResult;
+
+            var definitionResponse = response.Value as GotoDefinitionResponse;
+
+            Assert.Null(definitionResponse.FileName);
+            Assert.Equal(0, definitionResponse.Line);
+            Assert.Equal(0, definitionResponse.Column);
+            Assert.Contains("public static class Enumerable", definitionResponse.MetadataSource);
+            Assert.Contains("public static List<TSource> ToList<TSource>(this IEnumerable<TSource> source)", definitionResponse.MetadataSource);
+        }
+
+        [Fact]
+        public async Task ReturnsPositionInMetadata_WhenSymbolIsType()
+        {
+            var controller = new OmnisharpController(CreateTestWorkspace(), null);
+            var response = await controller.GotoDefinition(new Request
+            {
+                FileName = "bar.cs",
+                Line = 9,
+                Column = 25
+            }) as ObjectResult;
+
+            var definitionResponse = response.Value as GotoDefinitionResponse;
+
+            Assert.Null(definitionResponse.FileName);
+            Assert.Equal(0, definitionResponse.Line);
+            Assert.Equal(0, definitionResponse.Column);
+            Assert.Contains("public class List<T> : IList<T>, ICollection<T>", definitionResponse.MetadataSource);
+        }
+
+        OmnisharpWorkspace CreateTestWorkspace()
+        {
+            var source1 = @"using System;
+
+class Foo {
+}";
+            var source2 = @"using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Bar {
+    public void Baz() {
+        Console.WriteLine(""Stuff"");
+
+        var foo = new List<string>();
+        foo.ToList();
+    }
+}";
+
+            return TestHelpers.CreateSimpleWorkspace(new Dictionary<string, string> {
+                { "foo.cs", source1 }, { "bar.cs", source2}
+            });
         }
     }
 }
